@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 claimsense.log
+
+server_backup.py
+server_old.py
