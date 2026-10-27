@@ -35,6 +35,7 @@ summary:after{content:"+";color:var(--ac);font:20px var(--mono)}details[open] su
 .policy{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0}
 .chip{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;min-width:150px}
 .chip label{display:block;font:11px var(--mono);letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.chip b{font:700 22px var(--sans)}
 .chip input{background:none;border:0;color:var(--fg);font:700 22px var(--sans);width:130px;outline:0}
 .say{display:flex;gap:10px;margin:0 0 26px}.say input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:999px;color:var(--fg);padding:14px 20px;font-size:15px;outline:0}
 .say input:focus{border-color:var(--ac)}
@@ -95,22 +96,24 @@ summary:after{content:"+";color:var(--ac);font:20px var(--mono)}details[open] su
 <span class="tag">01 / Pre-admission estimate</span>
 <h1 style="margin:16px 0 0">Know your claim.<br>Before admission.</h1>
 <div class="policy">
-<div class="chip"><label>Sum insured ₹</label><input id="si" type="number" value="500000"></div>
-<div class="chip"><label>Co-pay %</label><input id="cp" type="number" value="10"></div>
-<div class="chip"><label>Room limit ₹/day</label><input id="rl" type="number" value="5000"></div>
+<div class="chip" id="chSI" hidden><label>Sum insured</label><b id="si">–</b></div>
+<div class="chip"><label>Co-pay</label><b id="cp">–</b></div>
+<div class="chip"><label>Room limit / day</label><b id="rl">–</b></div>
 <div class="chip"><label>Other charges ₹</label><input id="oc" type="number" value="120000"></div></div>
-<div class="say"><input id="say" placeholder='Say it: "room Rs 8,000 x 3 days, other charges Rs 1,20,000, co-pay 10%, room limit Rs 5,000/day"'><button class="btn" id="go">Read it →</button></div>
+<div class="say"><input id="say" placeholder='Say it: "room 8000 per day, 3 days, other charges 120000"'><button class="btn" id="go">Read it →</button></div>
+<p id="msg" class="fine" style="margin:-14px 0 20px;color:var(--ac)"></p>
 <div class="panels">
 <div class="pn p1"><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">02 / Room choice</span><span class="pill" id="lim"></span></div>
 <h2>What your room really costs.</h2><p>Your room selection changes more than the room charge. See the full policy effect before you decide.</p>
 <div class="room"><div><small>Selected room</small>₹ <input id="rr" type="number" value="8000"><small>per day</small></div>
 <div class="step2"><button id="m">–</button><div><b id="dd">3</b><small>days</small></div><button id="p">+</button></div></div>
-<div class="state"><span id="st1"></span><span id="st2"></span></div></div>
+<div class="state"><span id="st1"></span><span id="st2"></span></div>
+<button class="btn" id="calc" style="margin-top:20px;background:#000;color:#fff">Show my estimate →</button></div>
 <div class="pn p2"><span class="tag">03 / Your policy effect</span><h2>The actual numbers</h2>
 <div class="pair"><div><small>Insurer likely pays</small><div class="big" id="ins">–</div></div><div><small>Your estimated share</small><div class="big you" id="you">–</div></div></div>
 <div class="bar"><s id="bar"></s></div><div class="legend"><span>Insurer</span><span>You</span></div>
 <div class="rows" style="margin-top:22px" id="rows"></div></div>
-<div class="pn p3"><span class="tag">04 / ClaimSense insight</span><h3 id="ins2">–</h3>
+<div class="pn p3"><span class="tag">04 / ClaimSense insight</span><h3 id="ins2">–</h3><p id="sg" style="color:#ffd24a;font-size:14px;margin:-6px 0 14px"></p>
 <ul><li>Exact math, not AI guesses</li><li>Missing inputs are always asked</li><li>Runs locally and privately</li></ul>
 <button class="btn ghost" id="ex">Explain this estimate</button><div id="expl"></div>
 <p class="fine">Estimate only. Your insurer's final decision applies. Verify rules against your actual policy.</p></div></div>
@@ -120,45 +123,62 @@ summary:after{content:"+";color:var(--ac);font:20px var(--mono)}details[open] su
 <dl class="cs-rows" id="cr"></dl><div class="cs-act"><button class="btn ghost" id="cn">Edit</button><button class="btn" id="cy">Looks correct →</button></div></div></div>
 
 <script>
-const $=id=>document.getElementById(id),inr=n=>"₹"+Math.round(n).toLocaleString("en-IN"),v=id=>+$(id).value||0;
+const $=id=>document.getElementById(id),inr=n=>"₹"+Math.round(n).toLocaleString("en-IN"),v=id=>+$(id).value||0,msg=t=>$("msg").textContent=t||"";
+let cfg={},lastD=null;
 /* boot */
 let k=0;const bi=setInterval(()=>{k+=7;if(k>=100){k=100;clearInterval(bi);setTimeout(()=>{$("boot").style.opacity=0;setTimeout(()=>$("boot").remove(),500)},200)}
 $("bt").textContent="INITIALIZING CLAIMSENSE "+String(k).padStart(2,"0")+"%";$("bb").style.width=k+"%"},60);
 /* tabs */
-function route(){const h=(location.hash||"#overview").slice(1);const p=h==="estimator"?"estimator":"overview";
+function route(){const p=(location.hash||"#overview")==="#estimator"?"estimator":"overview";
 document.querySelectorAll("section.page").forEach(s=>s.classList.toggle("on",s.id===p));
 document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("on",a.dataset.p===p));scrollTo(0,0)}
 addEventListener("hashchange",route);route();
-/* calc: proportionate deduction when room rent > limit */
-function calc(){const rent=v("rr"),d=Math.max(1,v("dd")|0||+$("dd").textContent),lim=v("rl"),oc=v("oc"),cp=v("cp")/100,si=v("si");
-const over=lim>0&&rent>lim,ratio=over?lim/rent:1,room=rent*d,roomEl=Math.min(rent,lim||rent)*d,ocEl=oc*ratio,el=roomEl+ocEl,
-ins=Math.min(el*(1-cp),si),total=room+oc,you=Math.max(0,total-ins);return{rent,d,lim,oc,cp,si,over,ratio,room,roomEl,ocEl,el,ins,total,you}}
-function render(){const r=calc();$("dd").textContent=r.d;$("lim").textContent="Policy limit "+inr(r.lim)+"/day";
-$("st1").textContent=r.over?"Above limit":"Within policy";$("st2").textContent=r.over?"Higher deduction":"No room deduction";
-$("ins").textContent=inr(r.ins);$("you").textContent=inr(r.you);$("bar").style.width=(r.total?r.ins/r.total*100:0)+"%";
-$("rows").innerHTML=[["Room charges ("+r.d+" d)",inr(r.room)],["Other charges",inr(r.oc)],["Total bill",inr(r.total)],["Eligible after room limit",inr(r.el)],["Co-pay "+Math.round(r.cp*100)+"%",inr(r.el*r.cp)]].map(x=>"<div><span>"+x[0]+"</span><b>"+x[1]+"</b></div>").join("");
-$("ins2").textContent=r.over?"Your room is "+inr(r.rent-r.lim)+"/day above the limit, so eligible bills shrink to "+Math.round(r.ratio*100)+"%.":"Your room is within the limit. No room-based deduction applies.";
-$("tk").innerHTML=Array(2).fill("SUM INSURED <b>"+inr(r.si)+"</b> / CO-PAY <b>"+Math.round(r.cp*100)+"%</b> / ROOM LIMIT <b>"+inr(r.lim)+"/DAY</b> / INSURER PAYS <b>"+inr(r.ins)+"</b> / YOUR SHARE <b>"+inr(r.you)+"</b> / RUNS LOCALLY &nbsp;/&nbsp; ").join("");$("expl").textContent=""}
-["si","cp","rl","oc","rr"].forEach(i=>$(i).addEventListener("input",render));
-$("m").onclick=()=>{$("dd").textContent=Math.max(1,+$("dd").textContent-1);render()};
-$("p").onclick=()=>{$("dd").textContent=+$("dd").textContent+1;render()};
-$("ex").onclick=()=>{const r=calc();$("expl").textContent=[
-"1. Room: "+inr(r.rent)+" × "+r.d+" days = "+inr(r.room)+".",
-r.over?"2. Limit "+inr(r.lim)+"/day < rent, so ratio = "+inr(r.lim)+" ÷ "+inr(r.rent)+" = "+r.ratio.toFixed(2)+". Other charges "+inr(r.oc)+" × "+r.ratio.toFixed(2)+" = "+inr(r.ocEl)+".":"2. Rent is within the limit, so nothing is cut.",
-"3. Eligible = "+inr(r.el)+". Co-pay "+Math.round(r.cp*100)+"% leaves insurer paying "+inr(r.ins)+".",
-"4. You pay "+inr(r.total)+" − "+inr(r.ins)+" = "+inr(r.you)+"."].join("\n")};
-/* sentence reader + confirm modal */
-function amt(s,m){if(!s)return null;let n=parseFloat(s.replace(/,/g,""));if(m&&/lakh|lac/i.test(m))n*=1e5;else if(m&&/^k$/i.test(m))n*=1e3;return n}
-function parse(t){const g=(re)=>{const m=t.match(re);return m?amt(m[1],m[2]):null},o={};
-o.rr=g(/room(?!\s*limit)(?:\s*rent)?[^\d]{0,15}([\d,.]+)\s*(lakh|lac|k)?/i);o.dd=g(/(\d+)\s*(?:days?|nights?)/i);
-o.oc=g(/(?:other|charges|medicines?|bill)[^\d]{0,20}([\d,.]+)\s*(lakh|lac|k)?/i);o.cp=g(/co-?pay[^\d]{0,10}(\d+)\s*%/i);
-o.rl=g(/limit[^\d]{0,15}([\d,.]+)\s*(lakh|lac|k)?/i);return o}
+/* policy from server */
+function ticker(d){let t="";if(cfg.copay!=null)t+="CO-PAY <b>"+cfg.copay+"%</b> / ";if(cfg.limit!=null)t+="ROOM LIMIT <b>"+inr(cfg.limit)+"/DAY</b> / ";
+if(d)t+="INSURER PAYS <b>"+inr(d.ins)+"</b> / YOUR SHARE <b>"+inr(d.oop)+"</b> / ";t+="EXACT MATH, NOT AI GUESSES / <b>RUNS LOCALLY</b> / ";$("tk").innerHTML=Array(3).fill(t).join(" ")}
+function live(){const L=cfg.limit,r=v("rr");$("st1").textContent=L==null?"":(r>L?"Above limit":"Within policy");$("st2").textContent=L==null?"":(r>L?"Higher deduction":"No room deduction")}
+function setCfg(){const L=cfg.limit,C=cfg.copay,S=cfg.sum_insured??cfg.sum??cfg.si??cfg.sum_assured;
+$("rl").textContent=L!=null?inr(L):"–";$("cp").textContent=C!=null?C+"%":"–";if(S!=null){$("chSI").hidden=false;$("si").textContent=inr(S)}
+$("lim").textContent=L!=null?"Policy limit "+inr(L)+"/day":"";ticker();live()}
+fetch("/api/config").then(r=>r.json()).then(c=>{cfg=c;setCfg()}).catch(()=>{ticker();msg("Server not reachable. Start it with: python features_server.py")});
+$("rr").addEventListener("input",live);
+$("m").onclick=()=>{$("dd").textContent=Math.max(1,+$("dd").textContent-1)};
+$("p").onclick=()=>{$("dd").textContent=+$("dd").textContent+1};
+/* confirm modal (replaces the browser popup) */
 function confirmRows(rows){return new Promise(res=>{const m=$("cm");$("cr").replaceChildren(...rows.map(([a,b])=>{const d=document.createElement("div"),x=document.createElement("dt"),y=document.createElement("dd");x.textContent=a;y.textContent=b;d.append(x,y);return d}));
 m.hidden=false;$("cy").focus();const done=ok=>{m.hidden=true;removeEventListener("keydown",kd);res(ok)},kd=e=>e.key==="Escape"&&done(false);
 addEventListener("keydown",kd);$("cy").onclick=()=>done(true);$("cn").onclick=()=>done(false)})}
-async function read(){const t=$("say").value,o=parse(t),miss=[["rr","room rent"],["dd","days"],["oc","other charges"],["cp","co-pay"],["rl","room limit"]].filter(x=>o[x[0]]==null).map(x=>x[1]);
-if(miss.length){alert("I still need: "+miss.join(", ")+".");return}
-const ok=await confirmRows([["Room",inr(o.rr)+" × "+o.dd+" days"],["Other charges",inr(o.oc)],["Co-pay",o.cp+"%"],["Room limit",inr(o.rl)+"/day"]]);
-if(!ok)return;$("rr").value=o.rr;$("dd").textContent=o.dd;$("oc").value=o.oc;$("cp").value=o.cp;$("rl").value=o.rl;render()}
-$("go").onclick=read;$("say").addEventListener("keydown",e=>e.key==="Enter"&&read());render();
+/* estimate: numbers come from the Python server (/api/estimate) */
+async function calculate(){msg("");const rent=v("rr"),days=+$("dd").textContent,other=v("oc");
+const rows=[["Room",inr(rent)+" × "+days+" days"],["Other charges",inr(other)]];if(cfg.copay!=null)rows.push(["Co-pay",cfg.copay+"%"]);if(cfg.limit!=null)rows.push(["Room limit",inr(cfg.limit)+"/day"]);
+if(!await confirmRows(rows))return;
+const oc=window.confirm;window.confirm=()=>true;let pr;   /* the injected feature script asks via confirm(); our modal already asked */
+try{pr=fetch("/api/estimate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rent,days,other})})}finally{window.confirm=oc}
+try{const res=await pr,d=await res.json();if(!res.ok||d.error){msg(d.error||d.message||"The server could not calculate this. Check the numbers.");return}show(d,rent,days,other)}
+catch(e){msg("Server not reachable. Start it with: python features_server.py")}}
+function show(d,rent,days,other){const i=d.inputs||{},oop=d.results[3].out_of_pocket,total=i.total_bill??(rent*days+other),ins=total-oop,L=i.limit??cfg.limit,over=L!=null&&rent>L;
+lastD={d,rent,days,other,total,ins,oop,L,over};
+$("ins").textContent=inr(ins);$("you").textContent=inr(oop);$("bar").style.width=(total?ins/total*100:0)+"%";
+$("rows").innerHTML=[["Room charges ("+days+" d)",inr(rent*days)],["Other charges",inr(other)],["Total bill",inr(total)],["Insurer likely pays",inr(ins)],["Your share",inr(oop)]].map(x=>"<div><span>"+x[0]+"</span><b>"+x[1]+"</b></div>").join("");
+$("ins2").textContent=over?"Your room is "+inr(rent-L)+"/day above the limit, so the insurer's share is reduced.":"Your room is within the limit. No room-based deduction applies.";
+const b=d.best;$("sg").textContent=(over&&b)?"Suggestion: "+b.category+" ("+inr(b.rent)+"/day) stays within your limit. You would pay about "+inr(b.out_of_pocket)+", about "+inr(b.saving)+" less.":"";
+$("expl").textContent="";ticker(lastD)}
+$("calc").onclick=calculate;
+$("ex").onclick=()=>{if(!lastD){$("expl").textContent="Press “Show my estimate” first.";return}const x=lastD;
+$("expl").textContent=["Total bill = "+inr(x.rent)+" × "+x.days+" days + "+inr(x.other)+" other = "+inr(x.total)+".",
+x.over?"Your room rent is above the policy limit of "+inr(x.L)+"/day, so the policy cuts the eligible amount.":"Your room rent is within the policy limit.",
+"Insurer likely pays "+inr(x.ins)+"; you pay "+inr(x.oop)+".","These numbers are calculated by the ClaimSense server, not guessed by the AI."].join("\n")};
+/* sentence reader: server AI parser first, local pattern reader as fallback */
+function amt(s,m){if(!s)return null;let n=parseFloat(s.replace(/,/g,""));if(m&&/lakh|lac/i.test(m))n*=1e5;else if(m&&/^k$/i.test(m))n*=1e3;return n}
+function parse(t){const g=re=>{const m=t.match(re);return m?amt(m[1],m[2]):null};
+return{rr:g(/room(?!\s*limit)(?:\s*rent)?[^\d]{0,15}([\d,.]+)\s*(lakh|lac|k)?/i),dd:g(/(\d+)\s*(?:days?|nights?)/i),oc:g(/(?:other|charges|medicines?|bill)[^\d]{0,20}([\d,.]+)\s*(lakh|lac|k)?/i)}}
+function find(o,dep){dep=dep||0;if(!o||typeof o!=="object"||dep>4)return null;if("room_rent_per_day" in o||("days" in o&&"other_charges" in o))return o;for(const k in o){const f=find(o[k],dep+1);if(f)return f}return null}
+async function read(){const t=$("say").value.trim();if(!t)return;msg("");$("go").textContent="Reading…";let o=null;
+try{const r=await fetch("/api/understand",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t})}),f=find(await r.json());
+if(f){const n=x=>x==null?null:+x;o={rr:n(f.room_rent_per_day),dd:n(f.days),oc:n(f.other_charges)}}}catch(e){}
+if(!o)o=parse(t);$("go").textContent="Read it →";
+const miss=[["rr","room rent per day"],["dd","number of days"],["oc","other charges"]].filter(x=>o[x[0]]==null||isNaN(o[x[0]])).map(x=>x[1]);
+if(miss.length){msg("I still need: "+miss.join(", ")+".");return}
+$("rr").value=o.rr;$("dd").textContent=Math.max(1,Math.round(o.dd));$("oc").value=o.oc;live();calculate()}
+$("go").onclick=read;$("say").addEventListener("keydown",e=>e.key==="Enter"&&read());
 </script></body></html>
