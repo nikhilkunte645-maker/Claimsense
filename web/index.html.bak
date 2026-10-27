@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClaimSense — Know your claim before admission</title>
+<style>
+:root{--ac:#ff5a36;--ac2:#c93a18;--bg:#0b0b0b;--fg:#f3efe9;--mute:#9a9a9a;--card:#16110f;--line:#2e2a28;
+--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;--sans:Inter,"Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.5}
+.tag{font:12px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--ac)}
+h1,h2,h3{text-transform:uppercase;line-height:1;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(44px,8vw,104px);font-weight:800}h2{font-size:clamp(30px,4.5vw,56px)}h3{font-size:20px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+#boot{position:fixed;inset:0;background:#000;z-index:9999;display:grid;place-items:center;text-align:center;transition:opacity .5s}
+#boot b{display:block;font:14px var(--mono);letter-spacing:.25em;color:var(--ac)}
+#boot i{display:block;width:260px;height:2px;background:#222;margin:14px auto}#boot i s{display:block;height:100%;width:0;background:var(--ac)}
+header{position:sticky;top:0;z-index:50;background:rgba(11,11,11,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:20px;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;text-decoration:none;color:var(--fg);margin-right:auto}
+nav a{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);text-decoration:none;padding:10px 16px;border:1px solid var(--line);border-radius:999px;margin-left:6px}
+nav a.on,nav a:hover{color:#000;background:var(--ac);border-color:var(--ac)}
+.ticker{border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;background:#000}
+.ticker div{display:inline-block;padding:10px 0;animation:tk 38s linear infinite;font:12px var(--mono);letter-spacing:.12em;color:var(--mute)}
+.ticker b{color:var(--ac);font-weight:500}@keyframes tk{to{transform:translateX(-50%)}}
+section.page{display:none;padding:56px 0 90px}section.page.on{display:block}
+.btn{display:inline-block;border:0;border-radius:999px;padding:14px 26px;background:var(--ac);color:#000;font-weight:700;cursor:pointer;text-decoration:none;font-size:15px}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid #444}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:26px}
+.step .n{font:44px var(--mono);color:var(--ac);margin-bottom:14px}.step p{color:var(--mute);margin:10px 0 0}
+.doss{margin-top:56px;border:1px dashed var(--ac);border-radius:22px;padding:30px;background:repeating-linear-gradient(135deg,#120d0b 0 12px,#0f0b09 12px 24px)}
+.doss h2{font-size:34px;margin:12px 0}.doss p{color:var(--mute);max-width:720px}
+details{border-bottom:1px solid var(--line);padding:16px 0}summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+summary:after{content:"+";color:var(--ac);font:20px var(--mono)}details[open] summary:after{content:"–"}details p{color:var(--mute);margin:10px 0 0}
+.policy{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;min-width:150px}
+.chip label{display:block;font:11px var(--mono);letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.chip input{background:none;border:0;color:var(--fg);font:700 22px var(--sans);width:130px;outline:0}
+.say{display:flex;gap:10px;margin:0 0 26px}.say input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:999px;color:var(--fg);padding:14px 20px;font-size:15px;outline:0}
+.say input:focus{border-color:var(--ac)}
+.panels{display:grid;grid-template-columns:1.1fr 1fr 1fr;border-radius:34px;overflow:hidden;min-height:520px}
+.pn{padding:34px}.p1{background:linear-gradient(160deg,var(--ac),var(--ac2));color:#1a0904}
+.p2{background:#f3efe9;color:#111}.p3{background:#000;color:var(--fg)}
+.p1 .tag{color:#1a0904}.p2 .tag{color:var(--ac2)}
+.p1 h2{margin:28px 0 12px;color:#fff}.p1 p{opacity:.85}
+.room{background:rgba(255,255,255,.22);border-radius:22px;padding:18px;margin-top:22px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.room small{display:block;font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.room input{background:none;border:0;border-bottom:2px dashed rgba(0,0,0,.4);font:800 34px var(--sans);width:150px;color:#1a0904;outline:0}
+.step2{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.3);border-radius:999px;padding:6px 10px;text-align:center}
+.step2 button{width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.25);color:#fff;font-size:20px;cursor:pointer}
+.step2 b{font-size:24px;display:block;line-height:1}
+.state{margin-top:14px;font:12px var(--mono);letter-spacing:.1em;text-transform:uppercase;display:flex;justify-content:space-between}
+.pill{padding:5px 12px;border-radius:999px;background:#000;color:#fff}
+.p2 h2{font-size:34px;margin:14px 0 26px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pair small{font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#666}
+.big{font:800 clamp(24px,2.6vw,34px) var(--sans);margin-top:6px}.big.you{color:var(--ac2)}
+.bar{height:16px;border-radius:99px;background:var(--ac2);overflow:hidden;margin:26px 0 8px}.bar s{display:block;height:100%;background:#111;width:50%;transition:width .5s}
+.legend{font:11px var(--mono);display:flex;justify-content:space-between;color:#666}
+.rows div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed #bbb;font-size:14px}
+.p3 h3{margin:18px 0;font-size:22px;min-height:70px;font-weight:700;text-transform:none;line-height:1.25}
+.p3 ul{list-style:none;padding:0;margin:0 0 22px;color:var(--mute)}.p3 li:before{content:"✓ ";color:var(--ac)}
+#expl{margin-top:18px;color:var(--mute);font-size:14px;white-space:pre-line}
+.fine{font-size:12px;color:#777;margin-top:26px}
+.cs-modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:99999}
+.cs-modal[hidden]{display:none}.cs-card{width:min(480px,92vw);background:var(--bg);border:1px solid var(--ac);border-radius:20px;padding:28px;box-shadow:0 0 44px rgba(255,90,54,.28)}
+.cs-card h3{font-size:26px;margin:10px 0 16px}.cs-rows div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.cs-rows{margin:0}.cs-rows dt{font:12px var(--mono);letter-spacing:.12em;color:var(--mute);text-transform:uppercase}.cs-rows dd{margin:0;font-weight:600;text-align:right}
+.cs-act{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+@media(max-width:900px){.grid3,.panels{grid-template-columns:1fr}.say{flex-direction:column}}
+</style></head><body>
+<div id="boot"><div><b id="bt">INITIALIZING CLAIMSENSE 00%</b><i><s id="bb"></s></i></div></div>
+<header><div class="wrap">
+<a class="logo" href="#overview"><svg width="30" height="34" viewBox="0 0 30 34"><path d="M15 1 2 6v10c0 9 6 14 13 17 7-3 13-8 13-17V6z" fill="#ff5a36"/><path d="m9 17 5 5 8-10" stroke="#000" stroke-width="3" fill="none"/></svg>ClaimSense</a>
+<nav><a href="#overview" data-p="overview">Overview</a><a href="#estimator" data-p="estimator">Estimator</a></nav></div>
+<div class="ticker"><div id="tk"></div></div></header>
+
+<section class="page" id="overview"><div class="wrap">
+<span class="tag">Transmission // Pre-admission</span>
+<h1 style="margin:18px 0 22px">Know your claim.<br>Before admission.</h1>
+<p style="max-width:620px;color:var(--mute);font-size:18px">Your room choice changes more than the room charge. See what your insurer is likely to pay and what you will carry — before you sign.</p>
+<p style="margin-top:28px"><a class="btn" href="#estimator">Open the estimator →</a></p>
+<div class="grid3">
+<div class="step"><div class="n">01</div><h3>Enter your policy</h3><p>Sum insured, co-pay and room-rent limit.</p></div>
+<div class="step"><div class="n">02</div><h3>Pick the room</h3><p>Daily rate and days. Type it, or say it in a sentence.</p></div>
+<div class="step"><div class="n">03</div><h3>See the real numbers</h3><p>Insurer share vs your share, with the deduction explained.</p></div></div>
+<div class="doss"><span class="tag">Classified // Read this first</span><h2>Exact math. Not AI guesses.</h2>
+<p>Every figure comes from a fixed formula. The AI only helps read what you typed, and you confirm it before anything is calculated. Everything runs locally and privately.</p></div>
+<div style="margin-top:56px"><span class="tag">02 / Inquiries</span><h2 style="margin:12px 0 18px">FAQ</h2>
+<details><summary>What is proportionate deduction?</summary><p>If your room costs more than the policy limit, many insurers cut other eligible charges in the same ratio (limit ÷ room rent). Check whether your policy applies it.</p></details>
+<details><summary>Is this the final claim amount?</summary><p>No. It is an estimate. Your insurer's decision and your policy wording always apply.</p></details>
+<details><summary>Where does my data go?</summary><p>Nowhere. Calculation happens in your browser.</p></details></div>
+</div></section>
+
+<section class="page" id="estimator"><div class="wrap">
+<span class="tag">01 / Pre-admission estimate</span>
+<h1 style="margin:16px 0 0">Know your claim.<br>Before admission.</h1>
+<div class="policy">
+<div class="chip"><label>Sum insured ₹</label><input id="si" type="number" value="500000"></div>
+<div class="chip"><label>Co-pay %</label><input id="cp" type="number" value="10"></div>
+<div class="chip"><label>Room limit ₹/day</label><input id="rl" type="number" value="5000"></div>
+<div class="chip"><label>Other charges ₹</label><input id="oc" type="number" value="120000"></div></div>
+<div class="say"><input id="say" placeholder='Say it: "room Rs 8,000 x 3 days, other charges Rs 1,20,000, co-pay 10%, room limit Rs 5,000/day"'><button class="btn" id="go">Read it →</button></div>
+<div class="panels">
+<div class="pn p1"><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">02 / Room choice</span><span class="pill" id="lim"></span></div>
+<h2>What your room really costs.</h2><p>Your room selection changes more than the room charge. See the full policy effect before you decide.</p>
+<div class="room"><div><small>Selected room</small>₹ <input id="rr" type="number" value="8000"><small>per day</small></div>
+<div class="step2"><button id="m">–</button><div><b id="dd">3</b><small>days</small></div><button id="p">+</button></div></div>
+<div class="state"><span id="st1"></span><span id="st2"></span></div></div>
+<div class="pn p2"><span class="tag">03 / Your policy effect</span><h2>The actual numbers</h2>
+<div class="pair"><div><small>Insurer likely pays</small><div class="big" id="ins">–</div></div><div><small>Your estimated share</small><div class="big you" id="you">–</div></div></div>
+<div class="bar"><s id="bar"></s></div><div class="legend"><span>Insurer</span><span>You</span></div>
+<div class="rows" style="margin-top:22px" id="rows"></div></div>
+<div class="pn p3"><span class="tag">04 / ClaimSense insight</span><h3 id="ins2">–</h3>
+<ul><li>Exact math, not AI guesses</li><li>Missing inputs are always asked</li><li>Runs locally and privately</li></ul>
+<button class="btn ghost" id="ex">Explain this estimate</button><div id="expl"></div>
+<p class="fine">Estimate only. Your insurer's final decision applies. Verify rules against your actual policy.</p></div></div>
+</div></section>
+
+<div class="cs-modal" id="cm" hidden><div class="cs-card" role="dialog" aria-modal="true"><span class="tag">// Confirm inputs</span><h3>Did I read this right?</h3>
+<dl class="cs-rows" id="cr"></dl><div class="cs-act"><button class="btn ghost" id="cn">Edit</button><button class="btn" id="cy">Looks correct →</button></div></div></div>
+
+<script>
+const $=id=>document.getElementById(id),inr=n=>"₹"+Math.round(n).toLocaleString("en-IN"),v=id=>+$(id).value||0;
+/* boot */
+let k=0;const bi=setInterval(()=>{k+=7;if(k>=100){k=100;clearInterval(bi);setTimeout(()=>{$("boot").style.opacity=0;setTimeout(()=>$("boot").remove(),500)},200)}
+$("bt").textContent="INITIALIZING CLAIMSENSE "+String(k).padStart(2,"0")+"%";$("bb").style.width=k+"%"},60);
+/* tabs */
+function route(){const h=(location.hash||"#overview").slice(1);const p=h==="estimator"?"estimator":"overview";
+document.querySelectorAll("section.page").forEach(s=>s.classList.toggle("on",s.id===p));
+document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("on",a.dataset.p===p));scrollTo(0,0)}
+addEventListener("hashchange",route);route();
+/* calc: proportionate deduction when room rent > limit */
+function calc(){const rent=v("rr"),d=Math.max(1,v("dd")|0||+$("dd").textContent),lim=v("rl"),oc=v("oc"),cp=v("cp")/100,si=v("si");
+const over=lim>0&&rent>lim,ratio=over?lim/rent:1,room=rent*d,roomEl=Math.min(rent,lim||rent)*d,ocEl=oc*ratio,el=roomEl+ocEl,
+ins=Math.min(el*(1-cp),si),total=room+oc,you=Math.max(0,total-ins);return{rent,d,lim,oc,cp,si,over,ratio,room,roomEl,ocEl,el,ins,total,you}}
+function render(){const r=calc();$("dd").textContent=r.d;$("lim").textContent="Policy limit "+inr(r.lim)+"/day";
+$("st1").textContent=r.over?"Above limit":"Within policy";$("st2").textContent=r.over?"Higher deduction":"No room deduction";
+$("ins").textContent=inr(r.ins);$("you").textContent=inr(r.you);$("bar").style.width=(r.total?r.ins/r.total*100:0)+"%";
+$("rows").innerHTML=[["Room charges ("+r.d+" d)",inr(r.room)],["Other charges",inr(r.oc)],["Total bill",inr(r.total)],["Eligible after room limit",inr(r.el)],["Co-pay "+Math.round(r.cp*100)+"%",inr(r.el*r.cp)]].map(x=>"<div><span>"+x[0]+"</span><b>"+x[1]+"</b></div>").join("");
+$("ins2").textContent=r.over?"Your room is "+inr(r.rent-r.lim)+"/day above the limit, so eligible bills shrink to "+Math.round(r.ratio*100)+"%.":"Your room is within the limit. No room-based deduction applies.";
+$("tk").innerHTML=Array(2).fill("SUM INSURED <b>"+inr(r.si)+"</b> / CO-PAY <b>"+Math.round(r.cp*100)+"%</b> / ROOM LIMIT <b>"+inr(r.lim)+"/DAY</b> / INSURER PAYS <b>"+inr(r.ins)+"</b> / YOUR SHARE <b>"+inr(r.you)+"</b> / RUNS LOCALLY &nbsp;/&nbsp; ").join("");$("expl").textContent=""}
+["si","cp","rl","oc","rr"].forEach(i=>$(i).addEventListener("input",render));
+$("m").onclick=()=>{$("dd").textContent=Math.max(1,+$("dd").textContent-1);render()};
+$("p").onclick=()=>{$("dd").textContent=+$("dd").textContent+1;render()};
+$("ex").onclick=()=>{const r=calc();$("expl").textContent=[
+"1. Room: "+inr(r.rent)+" × "+r.d+" days = "+inr(r.room)+".",
+r.over?"2. Limit "+inr(r.lim)+"/day < rent, so ratio = "+inr(r.lim)+" ÷ "+inr(r.rent)+" = "+r.ratio.toFixed(2)+". Other charges "+inr(r.oc)+" × "+r.ratio.toFixed(2)+" = "+inr(r.ocEl)+".":"2. Rent is within the limit, so nothing is cut.",
+"3. Eligible = "+inr(r.el)+". Co-pay "+Math.round(r.cp*100)+"% leaves insurer paying "+inr(r.ins)+".",
+"4. You pay "+inr(r.total)+" − "+inr(r.ins)+" = "+inr(r.you)+"."].join("\n")};
+/* sentence reader + confirm modal */
+function amt(s,m){if(!s)return null;let n=parseFloat(s.replace(/,/g,""));if(m&&/lakh|lac/i.test(m))n*=1e5;else if(m&&/^k$/i.test(m))n*=1e3;return n}
+function parse(t){const g=(re)=>{const m=t.match(re);return m?amt(m[1],m[2]):null},o={};
+o.rr=g(/room(?!\s*limit)(?:\s*rent)?[^\d]{0,15}([\d,.]+)\s*(lakh|lac|k)?/i);o.dd=g(/(\d+)\s*(?:days?|nights?)/i);
+o.oc=g(/(?:other|charges|medicines?|bill)[^\d]{0,20}([\d,.]+)\s*(lakh|lac|k)?/i);o.cp=g(/co-?pay[^\d]{0,10}(\d+)\s*%/i);
+o.rl=g(/limit[^\d]{0,15}([\d,.]+)\s*(lakh|lac|k)?/i);return o}
+function confirmRows(rows){return new Promise(res=>{const m=$("cm");$("cr").replaceChildren(...rows.map(([a,b])=>{const d=document.createElement("div"),x=document.createElement("dt"),y=document.createElement("dd");x.textContent=a;y.textContent=b;d.append(x,y);return d}));
+m.hidden=false;$("cy").focus();const done=ok=>{m.hidden=true;removeEventListener("keydown",kd);res(ok)},kd=e=>e.key==="Escape"&&done(false);
+addEventListener("keydown",kd);$("cy").onclick=()=>done(true);$("cn").onclick=()=>done(false)})}
+async function read(){const t=$("say").value,o=parse(t),miss=[["rr","room rent"],["dd","days"],["oc","other charges"],["cp","co-pay"],["rl","room limit"]].filter(x=>o[x[0]]==null).map(x=>x[1]);
+if(miss.length){alert("I still need: "+miss.join(", ")+".");return}
+const ok=await confirmRows([["Room",inr(o.rr)+" × "+o.dd+" days"],["Other charges",inr(o.oc)],["Co-pay",o.cp+"%"],["Room limit",inr(o.rl)+"/day"]]);
+if(!ok)return;$("rr").value=o.rr;$("dd").textContent=o.dd;$("oc").value=o.oc;$("cp").value=o.cp;$("rl").value=o.rl;render()}
+$("go").onclick=read;$("say").addEventListener("keydown",e=>e.key==="Enter"&&read());render();
+</script></body></html>

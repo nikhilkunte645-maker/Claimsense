@@ -1,11 +1,7 @@
-venv/
+﻿venv/
+.venv/
 __pycache__/
 *.pyc
+*.bak
+*.log
 .env
-claimsense.log
-
-server_backup.py
-server_old.py
-
-server_backup.py
-server_old.py
